@@ -1,0 +1,47 @@
+SEED:
+  random_seed: 2019
+
+DATALOADER:
+  num_workers: 2
+  shuffle: False
+  pin_memory: True
+  drop_last: False
+
+TRAIN:
+  num_epochs: 1000
+  batch_size: 1
+  learning_rate: 0.0005
+  early_stopping_patience: 20
+  model: 
+  optimizer:
+  scheduler:
+  momentum:
+  weight_decay: 0.00001
+  loss_function:
+  metric_function:
+
+TEST:
+  check_point: 
+  batch_size: 1
+  model: 
+
+PERFORMANCE_RECORD:
+  column_list:
+    - train_serial
+    - train_timestamp
+    - model_str
+    - optimizer_str
+    - loss_function_str
+    - metric_function_str
+    - early_stopping_patience
+    - batch_size
+    - epoch
+    - learning_rate
+    - momentum
+    - random_seed # -----------key columns-------------
+    - epoch_index 
+    - train_loss
+    - validation_loss
+    - train_score
+    - validation_score
+    - elapsed_time
