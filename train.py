@@ -27,16 +27,16 @@ if __name__ == "__main__":
         sys.exit()
 
     PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
-    SRC_DIR = os.path.join(PROJECT_DIR,"src")
-    CONFIG_DIR = os.path.join(SRC_DIR,"config")
+    SRC_DIR = os.path.join(PROJECT_DIR, "src")
+    CONFIG_DIR = os.path.join(SRC_DIR, "config")
 
-    TRAIN_CONFIG_PATH = os.path.join(CONFIG_DIR, "train", f'{train_config_fn}.yml')
+    TRAIN_CONFIG_PATH = os.path.join(CONFIG_DIR, "train", f"{train_config_fn}.yml")
 
-    print("TRAIN_CONFIG_PATH",TRAIN_CONFIG_PATH)
+    print("TRAIN_CONFIG_PATH", TRAIN_CONFIG_PATH)
     train_config = load_yaml(TRAIN_CONFIG_PATH)
 
     # SEED
-    RANDOM_SEED = train_config['SEED']['random_seed']    
+    RANDOM_SEED = train_config["SEED"]["random_seed"]
 
     # Set random seed
     torch.manual_seed(RANDOM_SEED)
@@ -45,7 +45,13 @@ if __name__ == "__main__":
     np.random.seed(RANDOM_SEED)
     random.seed(RANDOM_SEED)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    trainer = Trainer(PROJECT_DIR = PROJECT_DIR, device=device, mode = "train", config = train_config)
+    trainer = Trainer(
+        PROJECT_DIR=PROJECT_DIR,
+        data_dir=data_dir,
+        device=device,
+        mode="train",
+        config=train_config,
+    )
     trainer.train()

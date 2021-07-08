@@ -18,24 +18,17 @@ if __name__ == "__main__":
     test_config_fn = args.test_config_fn
 
     PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
-    SRC_DIR = os.path.join(PROJECT_DIR,"src")
-    RESULTS_DIR = os.path.join(PROJECT_DIR, "results") 
-    CONFIG_DIR = os.path.join(SRC_DIR,"config")
+    SRC_DIR = os.path.join(PROJECT_DIR, "src")
+    RESULTS_DIR = os.path.join(PROJECT_DIR, "results")
+    CONFIG_DIR = os.path.join(SRC_DIR, "config")
 
-    DIRS = {
-        "PROJECT_DIR" : PROJECT_DIR,
-        "SRC_DIR" : SRC_DIR,
-        "RESULTS_DIR" : RESULTS_DIR,
-        "CONFIG_DIR" : CONFIG_DIR,
-    }
+    TEST_CONFIG_PATH = os.path.join(CONFIG_DIR, "test", f"{test_config_fn}.yml")
 
-    TEST_CONFIG_PATH = os.path.join(CONFIG_DIR, "test", f'{test_config_fn}.yml')
-
-    print("TEST_CONFIG_PATH",TEST_CONFIG_PATH)
+    print("TEST_CONFIG_PATH", TEST_CONFIG_PATH)
     test_config = load_yaml(TEST_CONFIG_PATH)
 
     # SEED
-    RANDOM_SEED = test_config['SEED']['random_seed']
+    RANDOM_SEED = test_config["SEED"]["random_seed"]
 
     # Set random seed
     torch.manual_seed(RANDOM_SEED)
@@ -44,5 +37,9 @@ if __name__ == "__main__":
     np.random.seed(RANDOM_SEED)
     random.seed(RANDOM_SEED)
 
-    trainer = Trainer(mode = "train", config = test_config, dirs = DIRS)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    trainer = Trainer(
+        PROJECT_DIR=PROJECT_DIR, device=device, mode="test", config=test_config
+    )
     trainer.evaluate()

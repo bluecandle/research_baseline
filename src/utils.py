@@ -9,63 +9,74 @@ import logging
 def load_csv(path: str):
     return pd.read_csv(path)
 
+
 def load_json(path):
-    return pd.read_json(path, orient='records', encoding='utf-8-sig')
+    return pd.read_json(path, orient="records", encoding="utf-8-sig")
+
 
 def load_jsonl(path):
-    with open(path, encoding='UTF8') as f:
+    with open(path, encoding="UTF8") as f:
         lines = f.read().splitlines()
         df_inter = pd.DataFrame(lines)
-        df_inter.columns = ['json_element']
-        df = pd.json_normalize(df_inter['json_element'].apply(json.loads))
+        df_inter.columns = ["json_element"]
+        df = pd.json_normalize(df_inter["json_element"].apply(json.loads))
         return df
 
+
 def load_pkl(path):
-    with open(path, 'rb') as f:
+    with open(path, "rb") as f:
         return pickle.load(f)
 
+
 def load_yaml(path):
-    with open(path, 'r') as f:
+    with open(path, "r") as f:
         return yaml.load(f, Loader=yaml.FullLoader)
+
 
 def save_csv(path: str, obj: dict, index=False):
     try:
         obj.to_csv(path, index=index)
-        message = f'csv saved {path}'
+        message = f"csv saved {path}"
     except Exception as e:
-        message = f'Failed to save : {e}'
+        message = f"Failed to save : {e}"
     print(message)
     return message
 
-def save_json(path: str, obj:dict):
+
+def save_json(path: str, obj: dict):
     try:
-        with open(path, 'w') as f:
+        with open(path, "w") as f:
             json.dump(obj, f, indent=4, sort_keys=False)
-        message = f'Json saved {path}'
+        message = f"Json saved {path}"
     except Exception as e:
-        message = f'Failed to save : {e}'
+        message = f"Failed to save : {e}"
     print(message)
     return message
+
 
 def save_pkl(path, obj):
-    with open(path, 'wb') as f:
+    with open(path, "wb") as f:
         pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+
 
 def save_yaml(path, obj):
     try:
-        with open(path, 'w') as f:
+        with open(path, "w") as f:
             yaml.dump(obj, f, sort_keys=False)
-        message = f'Json saved {path}'
+        message = f"Json saved {path}"
     except Exception as e:
-        message = f'Failed to save : {e}'
+        message = f"Failed to save : {e}"
     print(message)
     return message
+
 
 def get_logger(name: str, file_path: str, stream=False) -> logging.RootLogger:
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
 
-    formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s')
+    formatter = logging.Formatter(
+        "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+    )
     stream_handler = logging.StreamHandler()
     file_handler = logging.FileHandler(file_path)
 
@@ -77,6 +88,7 @@ def get_logger(name: str, file_path: str, stream=False) -> logging.RootLogger:
     logger.addHandler(file_handler)
 
     return logger
+
 
 def make_directory(directory: str) -> str:
     """경로가 없으면 생성

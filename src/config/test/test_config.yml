@@ -8,6 +8,7 @@ DATALOADER:
   drop_last: False
 
 TRAIN:
+  check_point:
   num_epochs: 1000
   batch_size: 1
   learning_rate: 0.0005
