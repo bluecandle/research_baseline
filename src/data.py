@@ -178,6 +178,8 @@ def get_train_dataloader(dataset, batch_size, num_workers):
         shuffle=True,
     )
 
+    """ @todo random sampler 끼워넣기  """
+
     return loader
 
 

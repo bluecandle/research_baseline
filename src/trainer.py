@@ -1,12 +1,13 @@
+from logging import critical
 import os
 import time
 from datetime import datetime, timezone, timedelta
-from .utils import make_directory, get_logger
+from .utils import make_directory, get_logger, save_yaml
 
 import torch
 from torch import optim
+from torch.optim import lr_scheduler
 from torch.utils import data as torch_utils_data
-from torch.utils.data import DataLoader
 import torch.nn as nn
 
 from .data import (
@@ -15,6 +16,7 @@ from .data import (
     get_test_dataset,
     get_test_dataloader,
 )
+from .earlystoppers import LossEarlyStopper
 
 
 class Trainer(object):
@@ -45,20 +47,28 @@ class Trainer(object):
         self.VALIDATION_RATIO = None
         if self.mode == "train":
             self.VALIDATION_RATIO = config[self.mode]["validation_ratio"]
+            self.learning_rate = config[self.mode]['learning_rate']
+            self.early_stopping_patience = config[self.mode]['early_stopping_patience']
 
         self.BATCH_SIZE = config[self.mode]["batch_size"]
         self.NUM_WORKERS = config[self.mode]["num_workers"]
-        self.train_loader = None
-        self.validation_loader = None
-        self.test_loader = None
+        self.train_dataloader = None 
+        self.validation_dataloader = None
+        self.test_dataloader = None
 
         self.CHECK_POINT = config[self.mode]["check_point"]
+        self.NUM_EPOCHS = config[self.mode]["num_epochs"]
         self.MODEL = config[self.mode]["model"]
         self.model = None
         self.optimizer = None
         self.scheduler = None
         self.train_mean_loss = None
         self.val_mean_loss = None
+        self.criterion = 1E+8
+
+        self._init_train_validation_data_loader()
+        self._init_optimizer()
+        self._init_scheduler()
 
     def _init_train_validation_data_loader(self):
         original_train_dataset = get_train_dataset(data_dir=self.data_dir)
@@ -73,51 +83,175 @@ class Trainer(object):
         train_dataloader = get_train_dataloader(
             train_dataset, batch_size=self.BATCH_SIZE, num_workers=self.NUM_WORKERS
         )
-        val_dataloader = get_test_dataloader(
+        validation_dataloader = get_test_dataloader(
             validation_dataset, batch_size=self.BATCH_SIZE, num_workers=self.NUM_WORKERS
         )
 
-        return train_dataloader, val_dataloader
+        self.train_dataloader = train_dataloader
+        self.validation_dataloader = validation_dataloader 
+
+    def _init_model(self):
+
+        # model = 
+
+        model_init_state_dict = None
+        if self.CHECK_POINT:
+
+            if torch.load(self.CHECK_POINT).get("model_state_dict") is not None:
+                model_init_state_dict = torch.load(self.CHECK_POINT)["model_state_dict"]
+            elif torch.load(self.CHECK_POINT).get("model_dict") is not None:
+                model_init_state_dict = torch.load(self.CHECK_POINT)["model_dict"]
+            elif torch.load(self.CHECK_POINT).get("state_dict") is not None:
+                model_init_state_dict = torch.load(self.CHECK_POINT)["state_dict"]
+            else:
+                model_init_state_dict = torch.load(self.CHECK_POINT)
+
+            # model_init_state_dict.pop(".weight")
+
+        if model_init_state_dict:
+            # model.load_state_dict(model_init_state_dict, strict=False)
+
+            pass
+
+        # self.model =
+
+        raise NotImplementedError 
 
     def _init_optimizer(self):
 
         config_optimizer = self.config[self.mode]["optimizer"]
 
         if config_optimizer == "Adam":
-            self.optimizer = optim.Adam()
+            optimizer = optim.Adam()
         else:
-            self.optimizer = optim.SGD()
+            optimizer = optim.SGD()
 
-    def _train_epoch(self):
+        optimizer_init_state_dict = None
+        if self.CHECK_POINT:
 
-        pass
+            if torch.load(self.CHECK_POINT).get("optimizer_state_dict") is not None:
+                optimizer_init_state_dict = torch.load(self.CHECK_POINT)["optimizer_state_dict"]
+
+        if optimizer_init_state_dict:
+            ret = optimizer.load_state_dict(optimizer_init_state_dict, strict = False)
+            msg = f"[optimizer] |{ret}"
+            print(msg)
+            if self.logger:
+                self.logger.info(msg)
+
+        self.optimizer = optimizer
+
+    def _init_scheduler(self):
+
+        config_scheduler = self.config[self.mode]["scheduler"]
+        
+        # if config_scheduler == "":
+        #     self.scheduler = lr_scheduler.
+        # else:
+        #     self.scheduler = lr_scheduler.
+        scheduler = lr_scheduler.OneCycleLR(optimizer=self.optimizer, pct_start=0.1, div_factor=1e5, max_lr=self.learning_rate, epochs=self.NUM_EPOCHS, steps_per_epoch=len(self.train_dataloader))
+
+        scheduler_init_state_dict = None
+        if self.CHECK_POINT:
+
+            if torch.load(self.CHECK_POINT).get("scheduler_state_dict") is not None:
+                scheduler_init_state_dict = torch.load(self.CHECK_POINT)["scheduler_state_dict"]
+
+        if scheduler_init_state_dict:
+            
+            ret = scheduler.load_state_dict(scheduler_init_state_dict, strict = False)
+            msg = f"[scheduler] |{ret}"
+            print(msg)
+            if self.logger:
+                self.logger.info(msg)
+
+        self.scheduler = scheduler
+
+    def _train_epoch(self, epoch):
+        """Train model."""
+        self.model.train()
+
+        # self.train_mean_loss = 
+        raise NotImplementedError
+
+    def _validate_epoch(self, epoch):
+        """Validate model performance."""
+        self.model.eval()
+
+        # self.val_mean_loss = 
+        raise NotImplementedError
+
+    def _save_model(self,epoch):
+
+        if self.val_mean_loss < self.criterion:
+            self.criterion = self.val_mean_loss
+            save_path = os.path.join(self.PERFORMANCE_RECORD_DIR, f'best_{epoch+1}.pt')
+            check_point = {
+                "model_state_dict": self.model.state_dict(),
+                "optimizer_state_dict": self.optimizer.state_dict(),
+                "scheduler_state_dict": self.scheduler.state_dict()
+            }
+            torch.save(check_point, save_path)
+            msg = f"Model saved: {save_path}"
+            print(msg)
+            if self.logger:
+                self.logger.info(msg)
 
     def train(self):
-        """Main training loop."""
-
+        train_start_time = time.time()
         if self.logger:
             for key, val in self.config.__dict__.items():
                 self.logger.info(f"{key}: {val}")
 
-        self._init_train_validation_data_loader()
-        self._init_optimizer()
+        early_stopper = LossEarlyStopper(patience=self.early_stopping_patience, verbose=True, logger=self.logger)
 
-        for epoch in range(self._args.num_epochs):
+        save_yaml(os.path.join(self.PERFORMANCE_RECORD_DIR, 'train_config.yaml'), self.config)
+        
+        """Main training loop."""
+        for epoch in range(self.NUM_EPOCHS):
+            start_time = time.time()
+            start_msg = f"############# Strat Epoch: {epoch+1} #################"
+
+            print(start_msg)
             if self.logger:
-                self.logger.info(f"\nEpoch {epoch + 1}")
-
-            self._train_epoch()
+                self.logger.info(start_msg)
+            
+            self._train_epoch(epoch)
             self.scheduler.step()
-            self.validate()
+            self._validate_epoch(epoch)
+            self._save_model(epoch)
 
-            self._save_model()
+            time_per_epoch = (time.time() - start_time)/60
+        
+            end_msg = f"############# Finished Epoch: {epoch+1} | Took {time_per_epoch:.2f} mins #################"
+            print(end_msg)
+            if self.logger:
+                self.logger.info(end_msg)
 
-    def validate(self):
-        """Evaluate model performance."""
-        self.model.eval()
-        raise NotImplementedError
+            try:
+            # early_stopping check
+                early_stopper.check_early_stopping(loss=self.val_mean_loss)
+            except Exception as e:
+                msg = f"error with early_stopper\n{e}"
+                print(msg)
+                if self.logger:
+                    self.logger.info(msg)
+
+            if early_stopper.stop:
+                early_stop_msg = '############## Early stopped ##############'
+                print(early_stop_msg)
+                if self.logger:
+                    self.logger.info(early_stop_msg)
+                    break
+        
+        total_train_time = time.time()-train_start_time
+        msg = f"Total Training Time: {total_train_time}"
+        print(msg)
+        if self.logger:
+            self.logger.info(msg)
 
     def evaluate(self):
         """Evaluate model performance."""
         self.model.eval()
+
         raise NotImplementedError
